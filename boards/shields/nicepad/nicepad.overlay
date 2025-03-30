@@ -39,7 +39,7 @@
     keys {
         compatible = "gpio-keys";
         wakeup_key: wakeup_key {
-            gpios = <&pro_micro 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            gpios = <&pro_micro 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
         };
     };
 };
@@ -49,7 +49,6 @@
         hw_soft_off: hw_soft_off {
             compatible = "zmk,behavior-soft-off";
             #binding-cells = <0>;
-            hold-time-ms = <5000>;
         };
     };
 
