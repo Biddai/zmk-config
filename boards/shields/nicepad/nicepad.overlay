@@ -7,9 +7,11 @@
     default_kscan: kscan{
         compatible = "zmk,kscan-gpio-direct";
         label = "default_kscan";
+        wakeup-source;
 
         input-gpios = 
                     <&pro_micro 4 (GPIO_ACTIVE_LOW  | GPIO_PULL_UP)>;
+
     }; 
 };
 
@@ -30,5 +32,38 @@
         com-invdir;
         com-sequential;
         prechargep = <0x22>;
+    };
+};
+
+/ {
+    keys {
+        compatible = "gpio-keys";
+        wakeup_key: wakeup_key {
+            gpios = <&gpio0 10 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+        };
+    };
+};
+
+/ {
+    behaviors {
+        hw_soft_off: hw_soft_off {
+            compatible = "zmk,behavior-soft-off";
+            #binding-cells = <0>;
+            hold-time-ms = <5000>;
+        };
+    };
+
+    soft_off_behavior_key {
+        compatible = "zmk,gpio-key-behavior-trigger";
+        bindings = <&hw_soft_off>;
+        key = <&wakeup_key>;
+    };
+};
+
+/ {
+    wakeup_source: wakeup_source {
+        compatible = "zmk,gpio-key-wakeup-trigger";
+        trigger = <&wakeup_key>;
+        wakeup-source;
     };
 };
