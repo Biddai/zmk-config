@@ -8,7 +8,6 @@
         compatible = "zmk,kscan-gpio-direct";
         label = "default_kscan";
         wakeup-source;
-
         input-gpios = 
                     <&pro_micro 4 (GPIO_ACTIVE_LOW  | GPIO_PULL_UP)>;
 
@@ -45,13 +44,7 @@
         };
     };
 };
-/ {
-    wakeup_scan: wakeup_scan {
-        compatible = "zmk,kscan-gpio-direct";
-        input-keys = <&soft_off_gpio_key>;
-        wakeup-source;
-    };
-};
+
 / {
     behaviors {
         hw_soft_off: hw_soft_off {
@@ -78,10 +71,19 @@
         };
     };
 };
+// wakeup behaviors
 
 / {
     soft_off_wakers {
         compatible = "zmk,soft-off-wakeup-sources";
-        wakeup-sources = <&wakeup_scan>;
+        wakeup-sources = <&wakeup_scan>,<&default_kscan>;
+    };
+};
+
+/ {
+    wakeup_scan: wakeup_scan {
+        compatible = "zmk,kscan-gpio-direct";
+        input-keys = <&soft_off_gpio_key>;
+        wakeup-source;
     };
 };
