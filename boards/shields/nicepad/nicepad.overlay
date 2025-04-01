@@ -34,6 +34,8 @@
         prechargep = <0x22>;
     };
 };
+
+
 // Define soft off key and behaviors
 / {
     keys {
@@ -43,7 +45,13 @@
         };
     };
 };
-
+/ {
+    wakeup_scan: wakeup_scan {
+        compatible = "zmk,kscan-gpio-direct";
+        input-keys = <&soft_off_gpio_key>;
+        wakeup-source;
+    };
+};
 / {
     behaviors {
         hw_soft_off: hw_soft_off {
