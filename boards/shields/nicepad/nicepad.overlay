@@ -9,9 +9,8 @@
         label = "default_kscan";
         wakeup-source;
         input-gpios = 
-                    <&pro_micro 8 (GPIO_ACTIVE_LOW  | GPIO_PULL_UP)>,
-                    <&pro_micro 9 (GPIO_ACTIVE_LOW  | GPIO_PULL_UP)>,
-                    <&pro_micro 14 (GPIO_ACTIVE_LOW  | GPIO_PULL_UP)>;
+                    <&pro_micro 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,
+                    <&pro_micro 9 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
     }; 
 };
 
@@ -41,7 +40,7 @@
     keys {
         compatible = "gpio-keys";
         soft_off_gpio_key: soft_off_gpio_key {
-            gpios = <&pro_micro 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            gpios = <&pro_micro 14 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
         };
     };
 };
