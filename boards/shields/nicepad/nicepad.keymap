@@ -8,7 +8,7 @@
 
         default_layer{
             bindings = <
-                &kp KP_N3   &kp KP_N8   &mo 1
+                &kp KP_N3   &kp KP_N8   &to 1
                 &kp KP_N4   &kp KP_N5   &kp KP_N6
                 >;
 
@@ -16,8 +16,8 @@
         
         bt_layer {
             bindings = <
-                &bt BT_SEL 0   &bt BT_SEL 1   &bt BT_CLR
-                &mo 0    &bt BT_SEL 1    &bt BT_SEL 2
+                &bt BT_SEL 0   &bt BT_SEL 1   &to 0
+                &bt BT_CLR    &bt BT_SEL 1    &bt BT_SEL 2
             >;
         };
     };
