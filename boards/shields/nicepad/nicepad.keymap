@@ -8,7 +8,7 @@
 
         default_layer{
             bindings = <
-                &out OUT_TOG   &kp KP_N8   &mo 1
+                &kp KP_N3   &kp KP_N8   &mo 1
                 &kp KP_N4   &kp KP_N5   &kp KP_N6
                 >;
 
