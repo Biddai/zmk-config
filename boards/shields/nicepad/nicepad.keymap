@@ -9,16 +9,25 @@
 
         default_layer{
             bindings = <
-                &kp KP_N3   &kp KP_N8   &to 1
-                &out OUT_USB   &out OUT_BLE   &kp KP_N6
-                >;
+                &to 1   &to 2
+                &kp KP_N6   &kp KP_N5
+                &kp KP_N4   &kp KP_N3
+            >;
 
         };
         
         bt_layer {
             bindings = <
-                &bt BT_SEL 0   &bt BT_SEL 1   &to 0
-                &bt BT_CLR    &bt BT_SEL 1    &bt BT_SEL 2
+                &to 0   &to 2
+                &bt BT_SEL 0   &bt BT_SEL 1
+                &bt BT_SEL 2    &bt BT_CLR
+            >;
+        };
+        mice_layer {
+            bindings = <
+                &to 1   &to 0
+                &kp KP_N6   &kp KP_N5
+                &kp KP_N4   &kp KP_N3
             >;
         };
     };
