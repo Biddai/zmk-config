@@ -9,7 +9,7 @@
 
         default_layer{
             bindings = <
-                &to 1   &softreset
+                &to 1   &sys_reset
                 &kp KP_N6   &kp KP_N5
                 &kp KP_N4   &kp KP_N3
             >;
