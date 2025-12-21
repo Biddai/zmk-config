@@ -23,11 +23,11 @@
                 &bootloader    &bt BT_CLR
             >;
         };
-        powerpoint_layer {
+        slideshow_layer {
             bindings = <
                 &to 1   &to 0
-                PAGE_DOWN   PAGE_UP
-                F5   ESC
+                &kp PAGE_DOWN   &kp PAGE_UP
+                &kp F5   &kp ESC
             >;
         };
     };
