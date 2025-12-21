@@ -23,12 +23,12 @@
                 &bootloader    &bt BT_CLR
             >;
         };
-        mice_layer {
+        powerpoint_layer {
             bindings = <
                 &to 1   &to 0
-                &kp KP_N1   &kp KP_N2
-                &kp KP_N7   &kp KP_N8
+                PAGE_DOWN   PAGE_UP
+                F5   ESC
             >;
         };
     };
-};
+};56346453
