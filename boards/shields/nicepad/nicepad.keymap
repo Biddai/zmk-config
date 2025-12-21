@@ -23,7 +23,7 @@
                 &bootloader    &bt BT_CLR
             >;
         };
-        slideshow_layer {
+        second_layer {
             bindings = <
                 &to 1   &to 0
                 &kp PAGE_DOWN   &kp PAGE_UP
