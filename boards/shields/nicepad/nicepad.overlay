@@ -1,0 +1,33 @@
+#include <dt-bindings/zmk/matrix_transform.h>
+
+/ {
+    chosen {
+        zmk,kscan = &kscan0;
+        zmk,physical-layout = &physical_layout0;
+    };
+
+    kscan0: kscan {
+        compatible = "zmk,kscan-gpio-direct";
+        wakeup-source;
+        input-gpios
+            = <&gpio0 9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>   /* Board pin 009 / nRF P0.09 */
+            , <&gpio0 10 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  /* Board pin 010 / nRF P0.10 */
+            ;
+    };
+
+    default_transform: keymap_transform {
+        compatible = "zmk,matrix-transform";
+        columns = <2>;
+        rows = <1>;
+        map = <
+            RC(0,0) RC(0,1)
+        >;
+    };
+
+    physical_layout0: physical_layout_0 {
+        compatible = "zmk,physical-layout";
+        display-name = "Default";
+        kscan = <&kscan0>;
+        transform = <&default_transform>;
+    };
+};

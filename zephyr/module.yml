@@ -1,3 +1,4 @@
+name: zmk-keyboard-nicepad
 build:
   settings:
     board_root: .
