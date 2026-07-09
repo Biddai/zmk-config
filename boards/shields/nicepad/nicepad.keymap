@@ -15,7 +15,7 @@
         test_layer {
             display-name = "Test";
             bindings = <
-                &studio_unlock  &kp B
+                &kp B  &kp B
             >;
         };
     };
