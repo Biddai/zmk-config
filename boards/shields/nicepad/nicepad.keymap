@@ -6,8 +6,16 @@
         compatible = "zmk,keymap";
 
         default_layer {
+            display-name = "Base";
             bindings = <
-                &kp A  &kp B
+                &kp A  &mo 1
+            >;
+        };
+
+        test_layer {
+            display-name = "Test";
+            bindings = <
+                &studio_unlock  &kp B
             >;
         };
     };
