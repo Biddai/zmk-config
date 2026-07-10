@@ -67,7 +67,7 @@ static const lv_img_dsc_t nicepad_top_banner = {
 struct custom_battery_widget {
     sys_snode_t node;
     lv_obj_t *obj;
-    lv_color_t cbuf[20 * 14];
+    lv_color_t cbuf[18 * 12];
 };
 
 struct custom_output_widget {
@@ -242,15 +242,15 @@ static void draw_bluetooth_symbol(lv_obj_t *canvas, bool connected) {
     line.color = icon_fg();
     line.width = connected ? 2 : 1;
 
-    const lv_point_t spine[] = {{6, 1}, {6, 11}};
-    const lv_point_t upper[] = {{6, 1}, {12, 5}, {6, 8}};
-    const lv_point_t lower[] = {{6, 11}, {12, 7}, {6, 4}};
+    const lv_point_t spine[] = {{1, 1}, {1, 11}};
+    const lv_point_t upper[] = {{1, 1}, {7, 5}, {1, 8}};
+    const lv_point_t lower[] = {{1, 11}, {7, 7}, {1, 4}};
     lv_canvas_draw_line(canvas, spine, 2, &line);
     lv_canvas_draw_line(canvas, upper, 3, &line);
     lv_canvas_draw_line(canvas, lower, 3, &line);
 
     if (!connected) {
-        const lv_point_t slash[] = {{1, 11}, {13, 1}};
+        const lv_point_t slash[] = {{0, 11}, {8, 1}};
         lv_canvas_draw_line(canvas, slash, 2, &line);
     }
 }
@@ -262,13 +262,13 @@ static void set_battery_canvas(lv_obj_t *canvas, struct custom_battery_state sta
     init_rect(&fg, icon_fg());
 
     lv_canvas_fill_bg(canvas, icon_bg(), LV_OPA_COVER);
-    lv_canvas_draw_rect(canvas, 0, 2, 15, 8, &fg);
-    lv_canvas_draw_rect(canvas, 1, 3, 13, 6, &bg);
-    lv_canvas_draw_rect(canvas, 15, 4, 2, 4, &fg);
+    lv_canvas_draw_rect(canvas, 1, 2, 15, 8, &fg);
+    lv_canvas_draw_rect(canvas, 2, 3, 13, 6, &bg);
+    lv_canvas_draw_rect(canvas, 16, 4, 2, 4, &fg);
 
     uint8_t fill = (state.level > 100 ? 100 : state.level) * 11 / 100;
     if (fill > 0) {
-        lv_canvas_draw_rect(canvas, 2, 4, fill, 4, &fg);
+        lv_canvas_draw_rect(canvas, 3, 4, fill, 4, &fg);
     }
 
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
@@ -277,7 +277,7 @@ static void set_battery_canvas(lv_obj_t *canvas, struct custom_battery_state sta
         lv_draw_line_dsc_init(&bolt);
         bolt.color = icon_bg();
         bolt.width = 1;
-        const lv_point_t points[] = {{8, 2}, {6, 6}, {9, 6}, {7, 10}};
+        const lv_point_t points[] = {{9, 2}, {7, 6}, {10, 6}, {8, 10}};
         lv_canvas_draw_line(canvas, points, 4, &bolt);
     }
 #endif
@@ -298,7 +298,7 @@ static void set_output_canvas(lv_obj_t *canvas, struct custom_output_state state
         char text[5] = {};
         snprintf(text, sizeof(text), "%u%s", state.selected_endpoint.ble.profile_index + 1,
                  state.active_profile_bonded ? "" : "*");
-        lv_canvas_draw_text(canvas, 15, 1, 14, &label, text);
+        lv_canvas_draw_text(canvas, 10, 1, 14, &label, text);
         break;
     }
     }
@@ -372,14 +372,14 @@ ZMK_SUBSCRIPTION(nicepad_layer_bitmap, zmk_layer_state_changed);
 
 static void init_battery_widget(struct custom_battery_widget *widget, lv_obj_t *parent) {
     widget->obj = lv_canvas_create(parent);
-    lv_canvas_set_buffer(widget->obj, widget->cbuf, 20, 14, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(widget->obj, widget->cbuf, 18, 12, LV_IMG_CF_TRUE_COLOR);
     sys_slist_append(&battery_widgets, &widget->node);
     nicepad_battery_status_init();
 }
 
 static void init_output_widget(struct custom_output_widget *widget, lv_obj_t *parent) {
     widget->obj = lv_canvas_create(parent);
-    lv_canvas_set_buffer(widget->obj, widget->cbuf, 24, 12, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(widget->obj, widget->cbuf, 20, 12, LV_IMG_CF_TRUE_COLOR);
     sys_slist_append(&output_widgets, &widget->node);
     nicepad_output_status_init();
 }
