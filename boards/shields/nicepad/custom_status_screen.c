@@ -28,8 +28,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_NICEPAD_TOP_BANNER
     uint8_t nicepad_top_banner_map[] = {
-        0xff, 0xff, 0xff, 0xff, /* Color of index 0 */
-        0x00, 0x00, 0x00, 0xff, /* Color of index 1 */
+        0x00, 0x00, 0x00, 0xff, /* Color of index 0 */
+        0xff, 0xff, 0xff, 0xff, /* Color of index 1 */
 
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -221,9 +221,9 @@ static void init_layer_maps(void) {
     initialized = true;
 }
 
-static lv_color_t icon_bg(void) { return lv_color_black(); }
+static lv_color_t icon_bg(void) { return lv_color_white(); }
 
-static lv_color_t icon_fg(void) { return lv_color_white(); }
+static lv_color_t icon_fg(void) { return lv_color_black(); }
 
 static void draw_usb_symbol(lv_obj_t *canvas) {
     lv_draw_rect_dsc_t fg;
