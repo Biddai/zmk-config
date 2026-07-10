@@ -107,6 +107,9 @@ static struct custom_output_widget output_widget;
 static struct custom_layer_widget layer_widget;
 
 #define LAYER_NAME_REFRESH_INTERVAL_MS 500
+#define NICEPAD_LAYER_FONT_DEFAULT_HEIGHT 20
+#define NICEPAD_LAYER_FONT_COMPACT_HEIGHT 15
+#define NICEPAD_LAYER_FONT_LINE_GAP 4
 
 static void init_rect(lv_draw_rect_dsc_t *dsc, lv_color_t color) {
     lv_draw_rect_dsc_init(dsc);
@@ -290,14 +293,18 @@ static uint8_t nicepad_layer_char_width(char ch) {
     return (glyph != NULL) ? glyph->w : 0;
 }
 
-static int16_t nicepad_scaled_width(uint8_t width, uint8_t scale_div) {
-    return (width + scale_div - 1) / scale_div;
+static int16_t nicepad_scaled_width(uint8_t width, uint8_t target_height) {
+    if (target_height == NICEPAD_LAYER_FONT_HEIGHT) {
+        return width;
+    }
+
+    return (width * target_height + NICEPAD_LAYER_FONT_HEIGHT - 1) / NICEPAD_LAYER_FONT_HEIGHT;
 }
 
 static int16_t nicepad_max_i16(int16_t a, int16_t b) { return (a > b) ? a : b; }
 
 static int16_t nicepad_layer_text_width(const char *text, size_t len, uint8_t spacing,
-                                        uint8_t scale_div) {
+                                        uint8_t target_height) {
     int16_t width = 0;
     bool has_glyph = false;
 
@@ -312,17 +319,37 @@ static int16_t nicepad_layer_text_width(const char *text, size_t len, uint8_t sp
             width += spacing;
         }
 
-        width += nicepad_scaled_width(char_width, scale_div);
+        width += nicepad_scaled_width(char_width, target_height);
         has_glyph = true;
     }
 
     return width;
 }
 
-static void nicepad_layer_draw_glyph(lv_obj_t *canvas, const struct nicepad_layer_font_glyph *glyph,
-                                     int16_t x, int16_t y, uint8_t scale_div) {
-    lv_draw_rect_dsc_t fg;
-    init_rect(&fg, lv_color_black());
+static void nicepad_layer_draw_glyph(lv_color_t *cbuf,
+                                     const struct nicepad_layer_font_glyph *glyph, int16_t x,
+                                     int16_t y, uint8_t target_height) {
+    if (target_height == NICEPAD_LAYER_FONT_HEIGHT) {
+        for (uint8_t gy = 0; gy < glyph->h; gy++) {
+            for (uint8_t gx = 0; gx < glyph->w; gx++) {
+                uint8_t byte =
+                    nicepad_layer_font_bitmap[glyph->offset + gy * glyph->row_bytes + gx / 8];
+
+                if ((byte & BIT(7 - (gx % 8))) == 0) {
+                    continue;
+                }
+
+                int16_t px = x + gx;
+                int16_t py = y + gy;
+
+                if (px >= 0 && px < 128 && py >= 0 && py < 48) {
+                    cbuf[py * 128 + px] = lv_color_black();
+                }
+            }
+        }
+
+        return;
+    }
 
     for (uint8_t gy = 0; gy < glyph->h; gy++) {
         for (uint8_t gx = 0; gx < glyph->w; gx++) {
@@ -333,19 +360,19 @@ static void nicepad_layer_draw_glyph(lv_obj_t *canvas, const struct nicepad_laye
                 continue;
             }
 
-            int16_t px = x + gx / scale_div;
-            int16_t py = y + gy / scale_div;
+            int16_t px = x + gx * target_height / NICEPAD_LAYER_FONT_HEIGHT;
+            int16_t py = y + gy * target_height / NICEPAD_LAYER_FONT_HEIGHT;
 
             if (px >= 0 && px < 128 && py >= 0 && py < 48) {
-                lv_canvas_draw_rect(canvas, px, py, 1, 1, &fg);
+                cbuf[py * 128 + px] = lv_color_black();
             }
         }
     }
 }
 
-static void nicepad_layer_draw_line(lv_obj_t *canvas, const char *text, size_t len, int16_t y,
-                                    uint8_t spacing, uint8_t scale_div) {
-    int16_t width = nicepad_layer_text_width(text, len, spacing, scale_div);
+static void nicepad_layer_draw_line(lv_color_t *cbuf, const char *text, size_t len, int16_t y,
+                                    uint8_t spacing, uint8_t target_height) {
+    int16_t width = nicepad_layer_text_width(text, len, spacing, target_height);
     int16_t x = (128 - width) / 2;
     bool has_glyph = false;
 
@@ -356,7 +383,7 @@ static void nicepad_layer_draw_line(lv_obj_t *canvas, const char *text, size_t l
             if (has_glyph) {
                 x += spacing;
             }
-            x += nicepad_scaled_width(nicepad_layer_char_width(ch), scale_div);
+            x += nicepad_scaled_width(nicepad_layer_char_width(ch), target_height);
             has_glyph = true;
             continue;
         }
@@ -370,13 +397,13 @@ static void nicepad_layer_draw_line(lv_obj_t *canvas, const char *text, size_t l
             x += spacing;
         }
 
-        nicepad_layer_draw_glyph(canvas, glyph, x, y, scale_div);
-        x += nicepad_scaled_width(glyph->w, scale_div);
+        nicepad_layer_draw_glyph(cbuf, glyph, x, y, target_height);
+        x += nicepad_scaled_width(glyph->w, target_height);
         has_glyph = true;
     }
 }
 
-static size_t nicepad_layer_best_split(const char *text, size_t len) {
+static size_t nicepad_layer_best_split(const char *text, size_t len, uint8_t target_height) {
     size_t split = 0;
     int16_t best_score = INT16_MAX;
 
@@ -385,8 +412,8 @@ static size_t nicepad_layer_best_split(const char *text, size_t len) {
             continue;
         }
 
-        int16_t left = nicepad_layer_text_width(text, i, 1, 2);
-        int16_t right = nicepad_layer_text_width(&text[i + 1], len - i - 1, 1, 2);
+        int16_t left = nicepad_layer_text_width(text, i, 1, target_height);
+        int16_t right = nicepad_layer_text_width(&text[i + 1], len - i - 1, 1, target_height);
         int16_t score = nicepad_max_i16(left, right);
 
         if (score < best_score) {
@@ -400,8 +427,8 @@ static size_t nicepad_layer_best_split(const char *text, size_t len) {
     }
 
     for (size_t i = 1; i < len; i++) {
-        int16_t left = nicepad_layer_text_width(text, i, 1, 2);
-        int16_t right = nicepad_layer_text_width(&text[i], len - i, 1, 2);
+        int16_t left = nicepad_layer_text_width(text, i, 1, target_height);
+        int16_t right = nicepad_layer_text_width(&text[i], len - i, 1, target_height);
         int16_t score = nicepad_max_i16(left, right);
 
         if (score < best_score) {
@@ -413,32 +440,56 @@ static size_t nicepad_layer_best_split(const char *text, size_t len) {
     return split;
 }
 
-static void set_layer_canvas(lv_obj_t *canvas, const char *text) {
+static bool nicepad_layer_split_fits(const char *text, size_t len, size_t split,
+                                     uint8_t target_height) {
+    if (split == 0 || (target_height * 2 + NICEPAD_LAYER_FONT_LINE_GAP) > 48) {
+        return false;
+    }
+
+    size_t second_start = (text[split] == ' ') ? split + 1 : split;
+    int16_t left = nicepad_layer_text_width(text, split, 1, target_height);
+    int16_t right = nicepad_layer_text_width(&text[second_start], len - second_start, 1,
+                                             target_height);
+
+    return left <= 128 && right <= 128;
+}
+
+static void set_layer_canvas(lv_obj_t *canvas, lv_color_t *cbuf, const char *text) {
     size_t len = strlen(text);
     uint8_t spacing = 2;
 
-    lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
+    for (size_t i = 0; i < 128 * 48; i++) {
+        cbuf[i] = lv_color_white();
+    }
 
-    if (nicepad_layer_text_width(text, len, spacing, 1) <= 128) {
-        int16_t y = (48 - NICEPAD_LAYER_FONT_HEIGHT) / 2;
-        nicepad_layer_draw_line(canvas, text, len, y, spacing, 1);
+    if (nicepad_layer_text_width(text, len, spacing, NICEPAD_LAYER_FONT_DEFAULT_HEIGHT) <= 128) {
+        int16_t y = (48 - NICEPAD_LAYER_FONT_DEFAULT_HEIGHT) / 2;
+        nicepad_layer_draw_line(cbuf, text, len, y, spacing, NICEPAD_LAYER_FONT_DEFAULT_HEIGHT);
+        lv_obj_invalidate(canvas);
         return;
     }
 
-    size_t split = nicepad_layer_best_split(text, len);
-    uint8_t line_height = nicepad_scaled_width(NICEPAD_LAYER_FONT_HEIGHT, 2);
-    uint8_t line_gap = 4;
-    int16_t y = (48 - (line_height * 2 + line_gap)) / 2;
+    uint8_t line_height = NICEPAD_LAYER_FONT_DEFAULT_HEIGHT;
+    size_t split = nicepad_layer_best_split(text, len, line_height);
+
+    if (!nicepad_layer_split_fits(text, len, split, line_height)) {
+        line_height = NICEPAD_LAYER_FONT_COMPACT_HEIGHT;
+        split = nicepad_layer_best_split(text, len, line_height);
+    }
+
+    int16_t y = (48 - (line_height * 2 + NICEPAD_LAYER_FONT_LINE_GAP)) / 2;
 
     if (split == 0) {
-        nicepad_layer_draw_line(canvas, text, len, (48 - line_height) / 2, 1, 2);
+        nicepad_layer_draw_line(cbuf, text, len, (48 - line_height) / 2, 1, line_height);
+        lv_obj_invalidate(canvas);
         return;
     }
 
     size_t second_start = (text[split] == ' ') ? split + 1 : split;
-    nicepad_layer_draw_line(canvas, text, split, y, 1, 2);
-    nicepad_layer_draw_line(canvas, &text[second_start], len - second_start,
-                            y + line_height + line_gap, 1, 2);
+    nicepad_layer_draw_line(cbuf, text, split, y, 1, line_height);
+    nicepad_layer_draw_line(cbuf, &text[second_start], len - second_start,
+                            y + line_height + NICEPAD_LAYER_FONT_LINE_GAP, 1, line_height);
+    lv_obj_invalidate(canvas);
 }
 
 static void set_layer_widget_text(struct custom_layer_widget *widget, zmk_keymap_layer_index_t layer,
@@ -451,7 +502,7 @@ static void set_layer_widget_text(struct custom_layer_widget *widget, zmk_keymap
 
     strncpy(widget->text, text, sizeof(widget->text) - 1);
     widget->text[sizeof(widget->text) - 1] = '\0';
-    set_layer_canvas(widget->obj, widget->text);
+    set_layer_canvas(widget->obj, widget->cbuf, widget->text);
 }
 
 static void layer_name_refresh_manage(void);
