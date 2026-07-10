@@ -237,20 +237,27 @@ static void draw_usb_symbol(lv_obj_t *canvas) {
 }
 
 static void draw_bluetooth_symbol(lv_obj_t *canvas, bool connected) {
-    lv_draw_line_dsc_t line;
-    lv_draw_line_dsc_init(&line);
-    line.color = icon_fg();
-    line.width = connected ? 2 : 1;
+    lv_draw_rect_dsc_t fg;
+    init_rect(&fg, icon_fg());
 
-    const lv_point_t spine[] = {{1, 1}, {1, 11}};
-    const lv_point_t upper[] = {{1, 1}, {7, 5}, {1, 8}};
-    const lv_point_t lower[] = {{1, 11}, {7, 7}, {1, 4}};
-    lv_canvas_draw_line(canvas, spine, 2, &line);
-    lv_canvas_draw_line(canvas, upper, 3, &line);
-    lv_canvas_draw_line(canvas, lower, 3, &line);
+    lv_canvas_draw_rect(canvas, 1, 5, 2, 2, &fg);
+    lv_canvas_draw_rect(canvas, 5, 4, 1, 1, &fg);
+    lv_canvas_draw_rect(canvas, 6, 5, 1, 2, &fg);
+    lv_canvas_draw_rect(canvas, 5, 7, 1, 1, &fg);
+    lv_canvas_draw_rect(canvas, 9, 2, 1, 1, &fg);
+    lv_canvas_draw_rect(canvas, 10, 3, 1, 1, &fg);
+    lv_canvas_draw_rect(canvas, 11, 4, 1, 1, &fg);
+    lv_canvas_draw_rect(canvas, 11, 5, 1, 2, &fg);
+    lv_canvas_draw_rect(canvas, 11, 7, 1, 1, &fg);
+    lv_canvas_draw_rect(canvas, 10, 8, 1, 1, &fg);
+    lv_canvas_draw_rect(canvas, 9, 9, 1, 1, &fg);
 
     if (!connected) {
-        const lv_point_t slash[] = {{0, 11}, {8, 1}};
+        lv_draw_line_dsc_t line;
+        lv_draw_line_dsc_init(&line);
+        line.color = icon_fg();
+        line.width = 1;
+        const lv_point_t slash[] = {{0, 11}, {13, 1}};
         lv_canvas_draw_line(canvas, slash, 2, &line);
     }
 }
@@ -298,7 +305,7 @@ static void set_output_canvas(lv_obj_t *canvas, struct custom_output_state state
         char text[5] = {};
         snprintf(text, sizeof(text), "%u%s", state.selected_endpoint.ble.profile_index + 1,
                  state.active_profile_bonded ? "" : "*");
-        lv_canvas_draw_text(canvas, 10, 1, 14, &label, text);
+        lv_canvas_draw_text(canvas, 16, 3, 13, &label, text);
         break;
     }
     }
@@ -404,7 +411,7 @@ lv_obj_t *zmk_display_status_screen(void) {
     lv_obj_align(output_widget.obj, LV_ALIGN_TOP_LEFT, 2, 2);
 
     init_battery_widget(&battery_widget, screen);
-    lv_obj_align(battery_widget.obj, LV_ALIGN_TOP_RIGHT, 0, 1);
+    lv_obj_align(battery_widget.obj, LV_ALIGN_TOP_RIGHT, 0, 2);
 
     init_layer_widget(&layer_widget, screen);
     lv_obj_align(layer_widget.obj, LV_ALIGN_TOP_MID, 0, 16);
