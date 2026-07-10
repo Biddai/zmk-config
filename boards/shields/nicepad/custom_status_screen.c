@@ -67,7 +67,7 @@ static const lv_img_dsc_t nicepad_top_banner = {
 struct custom_battery_widget {
     sys_snode_t node;
     lv_obj_t *obj;
-    lv_color_t cbuf[18 * 12];
+    lv_color_t cbuf[20 * 14];
 };
 
 struct custom_output_widget {
@@ -298,7 +298,7 @@ static void set_output_canvas(lv_obj_t *canvas, struct custom_output_state state
         char text[5] = {};
         snprintf(text, sizeof(text), "%u%s", state.selected_endpoint.ble.profile_index + 1,
                  state.active_profile_bonded ? "" : "*");
-        lv_canvas_draw_text(canvas, 17, 0, 12, &label, text);
+        lv_canvas_draw_text(canvas, 15, 1, 14, &label, text);
         break;
     }
     }
@@ -372,14 +372,14 @@ ZMK_SUBSCRIPTION(nicepad_layer_bitmap, zmk_layer_state_changed);
 
 static void init_battery_widget(struct custom_battery_widget *widget, lv_obj_t *parent) {
     widget->obj = lv_canvas_create(parent);
-    lv_canvas_set_buffer(widget->obj, widget->cbuf, 18, 12, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(widget->obj, widget->cbuf, 20, 14, LV_IMG_CF_TRUE_COLOR);
     sys_slist_append(&battery_widgets, &widget->node);
     nicepad_battery_status_init();
 }
 
 static void init_output_widget(struct custom_output_widget *widget, lv_obj_t *parent) {
     widget->obj = lv_canvas_create(parent);
-    lv_canvas_set_buffer(widget->obj, widget->cbuf, 29, 12, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(widget->obj, widget->cbuf, 24, 12, LV_IMG_CF_TRUE_COLOR);
     sys_slist_append(&output_widgets, &widget->node);
     nicepad_output_status_init();
 }
@@ -404,7 +404,7 @@ lv_obj_t *zmk_display_status_screen(void) {
     lv_obj_align(output_widget.obj, LV_ALIGN_TOP_LEFT, 2, 2);
 
     init_battery_widget(&battery_widget, screen);
-    lv_obj_align(battery_widget.obj, LV_ALIGN_TOP_RIGHT, -2, 2);
+    lv_obj_align(battery_widget.obj, LV_ALIGN_TOP_RIGHT, 0, 1);
 
     init_layer_widget(&layer_widget, screen);
     lv_obj_align(layer_widget.obj, LV_ALIGN_TOP_MID, 0, 16);
