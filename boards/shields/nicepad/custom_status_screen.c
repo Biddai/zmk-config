@@ -134,6 +134,9 @@ static const uint8_t nicepad_layer_2_rle[] = {
 
 static uint8_t nicepad_layer_1_map[8 + 768];
 static uint8_t nicepad_layer_2_map[8 + 768];
+static uint8_t nicepad_layer_3_map[8 + 768];
+static uint8_t nicepad_layer_4_map[8 + 768];
+static uint8_t nicepad_layer_5_map[8 + 768];
 
 static const lv_img_dsc_t nicepad_layer_1 = {
     .header.always_zero = 0,
@@ -151,6 +154,33 @@ static const lv_img_dsc_t nicepad_layer_2 = {
     .data_size = sizeof(nicepad_layer_2_map),
     .header.cf = LV_IMG_CF_INDEXED_1BIT,
     .data = nicepad_layer_2_map,
+};
+
+static const lv_img_dsc_t nicepad_layer_3 = {
+    .header.always_zero = 0,
+    .header.w = 128,
+    .header.h = 48,
+    .data_size = sizeof(nicepad_layer_3_map),
+    .header.cf = LV_IMG_CF_INDEXED_1BIT,
+    .data = nicepad_layer_3_map,
+};
+
+static const lv_img_dsc_t nicepad_layer_4 = {
+    .header.always_zero = 0,
+    .header.w = 128,
+    .header.h = 48,
+    .data_size = sizeof(nicepad_layer_4_map),
+    .header.cf = LV_IMG_CF_INDEXED_1BIT,
+    .data = nicepad_layer_4_map,
+};
+
+static const lv_img_dsc_t nicepad_layer_5 = {
+    .header.always_zero = 0,
+    .header.w = 128,
+    .header.h = 48,
+    .data_size = sizeof(nicepad_layer_5_map),
+    .header.cf = LV_IMG_CF_INDEXED_1BIT,
+    .data = nicepad_layer_5_map,
 };
 
 static void init_rect(lv_draw_rect_dsc_t *dsc, lv_color_t color) {
@@ -183,6 +213,75 @@ static void set_layer_pixel(uint8_t *map, uint8_t x, uint8_t y) {
 }
 
 static void clear_layer_row(uint8_t *map, uint8_t y) { memset(map + 8 + (y * 16), 0, 16); }
+
+static uint8_t layer_glyph_row(char c, uint8_t row) {
+    switch (c) {
+    case '3':
+        return (uint8_t[]){0x07, 0x01, 0x03, 0x01, 0x07}[row];
+    case 'B':
+        return (uint8_t[]){0x06, 0x05, 0x06, 0x05, 0x06}[row];
+    case 'E':
+        return (uint8_t[]){0x07, 0x04, 0x06, 0x04, 0x07}[row];
+    case 'L':
+        return (uint8_t[]){0x04, 0x04, 0x04, 0x04, 0x07}[row];
+    case 'R':
+        return (uint8_t[]){0x06, 0x05, 0x06, 0x05, 0x05}[row];
+    case 'T':
+        return (uint8_t[]){0x07, 0x02, 0x02, 0x02, 0x02}[row];
+    case 'Y':
+        return (uint8_t[]){0x05, 0x05, 0x02, 0x02, 0x02}[row];
+    default:
+        return 0x00;
+    }
+}
+
+static void draw_layer_char(uint8_t *map, char c, uint8_t x, uint8_t y) {
+    for (uint8_t row = 0; row < 5; row++) {
+        uint8_t bits = layer_glyph_row(c, row);
+        for (uint8_t col = 0; col < 3; col++) {
+            if ((bits & BIT(2 - col)) != 0) {
+                set_layer_pixel(map, x + col, y + row);
+            }
+        }
+    }
+}
+
+static void draw_layer_text(uint8_t *map, const char *text, uint8_t x, uint8_t y) {
+    for (; *text != '\0'; text++, x += 4) {
+        if (*text != ' ') {
+            draw_layer_char(map, *text, x, y);
+        }
+    }
+}
+
+static void draw_layer_rect(uint8_t *map, uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
+    for (uint8_t col = 0; col < w; col++) {
+        set_layer_pixel(map, x + col, y);
+        set_layer_pixel(map, x + col, y + h - 1);
+    }
+
+    for (uint8_t row = 0; row < h; row++) {
+        set_layer_pixel(map, x, y + row);
+        set_layer_pixel(map, x + w - 1, y + row);
+    }
+}
+
+static void draw_layer_key_outline(uint8_t *map, uint8_t row, uint8_t col) {
+    draw_layer_rect(map, 41 + (col * 16), 17 + (row * 7), 12, 5);
+}
+
+static void draw_generated_layer_map(uint8_t *map, const char *title) {
+    init_layer_map(map);
+    uint8_t title_width = (strlen(title) * 4) - 1;
+    draw_layer_text(map, title, (128 - title_width) / 2, 5);
+
+    draw_layer_key_outline(map, 0, 0);
+    for (uint8_t row = 1; row < 4; row++) {
+        for (uint8_t col = 0; col < 3; col++) {
+            draw_layer_key_outline(map, row, col);
+        }
+    }
+}
 
 static void unpack_layer_map(uint8_t *map, const uint8_t *rle, size_t rle_len) {
     size_t page_byte = 0;
@@ -218,6 +317,9 @@ static void init_layer_maps(void) {
     clear_layer_row(nicepad_layer_1_map, 47);
 
     unpack_layer_map(nicepad_layer_2_map, nicepad_layer_2_rle, sizeof(nicepad_layer_2_rle));
+    draw_generated_layer_map(nicepad_layer_3_map, "LAYER 3");
+    draw_generated_layer_map(nicepad_layer_4_map, "LAYER 4");
+    draw_generated_layer_map(nicepad_layer_5_map, "BT");
     initialized = true;
 }
 
@@ -359,7 +461,23 @@ ZMK_SUBSCRIPTION(nicepad_output_status, zmk_ble_active_profile_changed);
 #endif
 
 static void set_layer_bitmap(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
-    lv_img_set_src(obj, layer == 0 ? &nicepad_layer_1 : &nicepad_layer_2);
+    switch (layer) {
+    case 0:
+        lv_img_set_src(obj, &nicepad_layer_1);
+        break;
+    case 1:
+        lv_img_set_src(obj, &nicepad_layer_2);
+        break;
+    case 2:
+        lv_img_set_src(obj, &nicepad_layer_3);
+        break;
+    case 3:
+        lv_img_set_src(obj, &nicepad_layer_4);
+        break;
+    default:
+        lv_img_set_src(obj, &nicepad_layer_5);
+        break;
+    }
 }
 
 static void layer_update_cb(zmk_keymap_layer_index_t layer) {
