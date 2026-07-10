@@ -22,6 +22,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/keymap.h>
 #include <zmk/usb.h>
 
+#include "nicepad_layer_font.h"
+
 #ifndef LV_ATTRIBUTE_IMG_NICEPAD_TOP_BANNER
 #define LV_ATTRIBUTE_IMG_NICEPAD_TOP_BANNER
 #endif
@@ -79,7 +81,8 @@ struct custom_output_widget {
 struct custom_layer_widget {
     sys_snode_t node;
     lv_obj_t *obj;
-    lv_obj_t *label;
+    lv_color_t cbuf[128 * 48];
+    char text[32];
 };
 
 struct custom_battery_state {
@@ -262,17 +265,130 @@ static const char *layer_name_text(zmk_keymap_layer_index_t layer) {
     return (name != NULL && name[0] != '\0') ? name : "Layer";
 }
 
-static void set_layer_label(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
-    lv_label_set_text(obj, layer_name_text(layer));
+static char nicepad_upper_char(char ch) {
+    return (ch >= 'a' && ch <= 'z') ? (ch - 'a' + 'A') : ch;
 }
 
-static void refresh_layer_label_if_changed(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
-    const char *name = layer_name_text(layer);
-    const char *current = lv_label_get_text(obj);
+static const struct nicepad_layer_font_glyph *nicepad_layer_font_get_glyph(char ch) {
+    ch = nicepad_upper_char(ch);
 
-    if (current == NULL || strcmp(current, name) != 0) {
-        lv_label_set_text(obj, name);
+    for (size_t i = 0; i < NICEPAD_LAYER_FONT_COUNT; i++) {
+        if (nicepad_layer_font_glyphs[i].ch == ch) {
+            return &nicepad_layer_font_glyphs[i];
+        }
     }
+
+    return NULL;
+}
+
+static uint8_t nicepad_layer_char_width(char ch) {
+    if (ch == ' ') {
+        return 10;
+    }
+
+    const struct nicepad_layer_font_glyph *glyph = nicepad_layer_font_get_glyph(ch);
+    return (glyph != NULL) ? glyph->w : 0;
+}
+
+static int16_t nicepad_layer_text_width(const char *text, uint8_t spacing) {
+    int16_t width = 0;
+    bool has_glyph = false;
+
+    for (size_t i = 0; text[i] != '\0'; i++) {
+        uint8_t char_width = nicepad_layer_char_width(text[i]);
+
+        if (char_width == 0) {
+            continue;
+        }
+
+        if (has_glyph) {
+            width += spacing;
+        }
+
+        width += char_width;
+        has_glyph = true;
+    }
+
+    return width;
+}
+
+static void nicepad_layer_draw_glyph(lv_obj_t *canvas, const struct nicepad_layer_font_glyph *glyph,
+                                     int16_t x, int16_t y) {
+    lv_draw_rect_dsc_t fg;
+    init_rect(&fg, lv_color_black());
+
+    for (uint8_t gy = 0; gy < glyph->h; gy++) {
+        for (uint8_t gx = 0; gx < glyph->w; gx++) {
+            uint8_t byte =
+                nicepad_layer_font_bitmap[glyph->offset + gy * glyph->row_bytes + gx / 8];
+
+            if ((byte & BIT(7 - (gx % 8))) == 0) {
+                continue;
+            }
+
+            int16_t px = x + gx;
+            int16_t py = y + gy;
+
+            if (px >= 0 && px < 128 && py >= 0 && py < 48) {
+                lv_canvas_draw_rect(canvas, px, py, 1, 1, &fg);
+            }
+        }
+    }
+}
+
+static void set_layer_canvas(lv_obj_t *canvas, const char *text) {
+    uint8_t spacing = 2;
+    int16_t width = nicepad_layer_text_width(text, spacing);
+
+    if (width > 128) {
+        spacing = 1;
+        width = nicepad_layer_text_width(text, spacing);
+    }
+
+    int16_t x = (128 - width) / 2;
+    int16_t y = (48 - NICEPAD_LAYER_FONT_HEIGHT) / 2;
+    bool has_glyph = false;
+
+    lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
+
+    for (size_t i = 0; text[i] != '\0'; i++) {
+        char ch = nicepad_upper_char(text[i]);
+
+        if (ch == ' ') {
+            if (has_glyph) {
+                x += spacing;
+            }
+            x += nicepad_layer_char_width(ch);
+            has_glyph = true;
+            continue;
+        }
+
+        const struct nicepad_layer_font_glyph *glyph = nicepad_layer_font_get_glyph(ch);
+        if (glyph == NULL) {
+            continue;
+        }
+
+        if (has_glyph) {
+            x += spacing;
+        }
+
+        nicepad_layer_draw_glyph(canvas, glyph, x, y);
+        x += glyph->w;
+        has_glyph = true;
+    }
+}
+
+static void set_layer_widget_text(struct custom_layer_widget *widget, zmk_keymap_layer_index_t layer,
+                                  bool force) {
+    const char *text = layer_name_text(layer);
+
+    if (!force && strcmp(widget->text, text) == 0) {
+        return;
+    }
+
+    strncpy(widget->text, text, sizeof(widget->text) - 1);
+    widget->text[sizeof(widget->text) - 1] = '\0';
+    set_layer_canvas(widget->obj, widget->text);
 }
 
 static void layer_name_refresh_manage(void);
@@ -280,7 +396,7 @@ static void layer_name_refresh_manage(void);
 static void layer_update_cb(zmk_keymap_layer_index_t layer) {
     struct custom_layer_widget *widget;
     SYS_SLIST_FOR_EACH_CONTAINER(&layer_widgets, widget, node) {
-        set_layer_label(widget->label, layer);
+        set_layer_widget_text(widget, layer, true);
     }
 
     layer_name_refresh_manage();
@@ -324,7 +440,7 @@ static void layer_name_refresh_work_cb(struct k_work *work) {
     struct custom_layer_widget *widget;
 
     SYS_SLIST_FOR_EACH_CONTAINER(&layer_widgets, widget, node) {
-        refresh_layer_label_if_changed(widget->label, layer);
+        set_layer_widget_text(widget, layer, false);
     }
 }
 
@@ -355,23 +471,12 @@ static void init_output_widget(struct custom_output_widget *widget, lv_obj_t *pa
 }
 
 static void init_layer_widget(struct custom_layer_widget *widget, lv_obj_t *parent) {
-    widget->obj = lv_obj_create(parent);
-    lv_obj_set_size(widget->obj, 128, 48);
-    lv_obj_clear_flag(widget->obj, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_bg_opa(widget->obj, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(widget->obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(widget->obj, 0, LV_PART_MAIN);
-
-    widget->label = lv_label_create(widget->obj);
-    lv_obj_set_width(widget->label, 128);
-    lv_label_set_long_mode(widget->label, LV_LABEL_LONG_CLIP);
-    lv_obj_set_style_text_align(widget->label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_set_style_text_color(widget->label, lv_color_black(), LV_PART_MAIN);
-    lv_obj_set_style_text_font(widget->label, lv_theme_get_font_large(widget->label), LV_PART_MAIN);
-    lv_obj_align(widget->label, LV_ALIGN_CENTER, 0, 0);
+    widget->obj = lv_canvas_create(parent);
+    lv_canvas_set_buffer(widget->obj, widget->cbuf, 128, 48, LV_IMG_CF_TRUE_COLOR);
 
     zmk_keymap_layer_index_t layer = zmk_keymap_highest_layer_active();
-    set_layer_label(widget->label, layer);
+    widget->text[0] = '\0';
+    set_layer_widget_text(widget, layer, true);
     sys_slist_append(&layer_widgets, &widget->node);
     nicepad_layer_name_init();
     layer_name_refresh_manage();
