@@ -28,8 +28,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_NICEPAD_TOP_BANNER
     uint8_t nicepad_top_banner_map[] = {
-        0x00, 0x00, 0x00, 0xff, /* Color of index 0 */
-        0xff, 0xff, 0xff, 0xff, /* Color of index 1 */
+        0xff, 0xff, 0xff, 0xff, /* Color of index 0 */
+        0x00, 0x00, 0x00, 0xff, /* Color of index 1 */
 
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -73,7 +73,7 @@ struct custom_battery_widget {
 struct custom_output_widget {
     sys_snode_t node;
     lv_obj_t *obj;
-    lv_color_t cbuf[34 * 12];
+    lv_color_t cbuf[29 * 12];
 };
 
 struct custom_layer_widget {
@@ -167,13 +167,13 @@ static void init_label(lv_draw_label_dsc_t *dsc, lv_color_t color, const lv_font
 }
 
 static void init_layer_map(uint8_t *map) {
-    map[0] = 0x00;
-    map[1] = 0x00;
-    map[2] = 0x00;
+    map[0] = 0xff;
+    map[1] = 0xff;
+    map[2] = 0xff;
     map[3] = 0xff;
-    map[4] = 0xff;
-    map[5] = 0xff;
-    map[6] = 0xff;
+    map[4] = 0x00;
+    map[5] = 0x00;
+    map[6] = 0x00;
     map[7] = 0xff;
     memset(map + 8, 0, 768);
 }
@@ -292,14 +292,13 @@ static void set_output_canvas(lv_obj_t *canvas, struct custom_output_state state
     switch (state.selected_endpoint.transport) {
     case ZMK_TRANSPORT_USB:
         draw_usb_symbol(canvas);
-        lv_canvas_draw_text(canvas, 19, 0, 15, &label, "USB");
         break;
     case ZMK_TRANSPORT_BLE: {
         draw_bluetooth_symbol(canvas, state.active_profile_connected);
         char text[5] = {};
         snprintf(text, sizeof(text), "%u%s", state.selected_endpoint.ble.profile_index + 1,
                  state.active_profile_bonded ? "" : "*");
-        lv_canvas_draw_text(canvas, 17, 0, 17, &label, text);
+        lv_canvas_draw_text(canvas, 17, 0, 12, &label, text);
         break;
     }
     }
@@ -380,7 +379,7 @@ static void init_battery_widget(struct custom_battery_widget *widget, lv_obj_t *
 
 static void init_output_widget(struct custom_output_widget *widget, lv_obj_t *parent) {
     widget->obj = lv_canvas_create(parent);
-    lv_canvas_set_buffer(widget->obj, widget->cbuf, 34, 12, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(widget->obj, widget->cbuf, 29, 12, LV_IMG_CF_TRUE_COLOR);
     sys_slist_append(&output_widgets, &widget->node);
     nicepad_output_status_init();
 }
