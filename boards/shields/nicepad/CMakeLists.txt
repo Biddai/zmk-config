@@ -1,0 +1,4 @@
+if(CONFIG_ZMK_DISPLAY)
+  zephyr_library()
+  zephyr_library_sources_ifdef(CONFIG_ZMK_DISPLAY_STATUS_SCREEN_CUSTOM custom_status_screen.c)
+endif()
