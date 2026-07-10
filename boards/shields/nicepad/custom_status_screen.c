@@ -20,9 +20,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/keymap.h>
-#if IS_ENABLED(CONFIG_ZMK_STUDIO)
-#include <zmk/studio/rpc.h>
-#endif
 #include <zmk/usb.h>
 
 #ifndef LV_ATTRIBUTE_IMG_NICEPAD_TOP_BANNER
@@ -82,7 +79,6 @@ struct custom_output_widget {
 struct custom_layer_widget {
     sys_snode_t node;
     lv_obj_t *obj;
-    lv_obj_t *img;
     lv_obj_t *label;
 };
 
@@ -107,117 +103,7 @@ static struct custom_battery_widget battery_widget;
 static struct custom_output_widget output_widget;
 static struct custom_layer_widget layer_widget;
 
-static const uint8_t nicepad_layer_1_rle[] = {
-    0x04, 0x01, 0x01, 0xe1, 0x1a, 0x21, 0x01, 0xe1, 0x60, 0x01, 0x04, 0x00,
-    0x01, 0xff, 0x07, 0x00, 0x02, 0xe0, 0x02, 0xf8, 0x04, 0xfe, 0x0b, 0x00,
-    0x01, 0xff, 0x64, 0x00, 0x01, 0xff, 0x07, 0x00, 0x04, 0x01, 0x04, 0xff,
-    0x0b, 0x00, 0x01, 0xff, 0x64, 0x00, 0x01, 0xff, 0x0b, 0x00, 0x04, 0xff,
-    0x0b, 0x00, 0x01, 0xff, 0x64, 0x00, 0x01, 0xff, 0x07, 0x00, 0x04, 0x78,
-    0x04, 0x7f, 0x04, 0x78, 0x07, 0x00, 0x01, 0xff, 0x04, 0x00, 0x01, 0xf8,
-    0x1a, 0x08, 0x01, 0xf8, 0x04, 0x00, 0x01, 0xf8, 0x1a, 0x08, 0x01, 0xf8,
-    0x04, 0x00, 0x01, 0xf8, 0x16, 0x08, 0x01, 0xf8, 0x04, 0x00, 0x04, 0x80,
-    0x01, 0x87, 0x1a, 0x84, 0x01, 0x87, 0x04, 0x80, 0x01, 0x87, 0x1a, 0x84,
-    0x01, 0x87, 0x04, 0x80, 0x01, 0x87, 0x1a, 0x84, 0x01, 0x87, 0x04, 0x80,
-    0x01, 0x87, 0x16, 0x84, 0x01, 0x87, 0x04, 0x80,
-};
-
-static const uint8_t nicepad_layer_2_rle[] = {
-    0x24, 0x00, 0x01, 0xe0, 0x1a, 0x20, 0x01, 0xe0, 0x64, 0x00, 0x01, 0xff,
-    0x03, 0x00, 0x02, 0xe0, 0x02, 0xf8, 0x0a, 0x1e, 0x02, 0x7e, 0x02, 0xf8,
-    0x02, 0xe0, 0x03, 0x00, 0x01, 0xff, 0x64, 0x00, 0x01, 0xff, 0x03, 0x00,
-    0x04, 0x01, 0x08, 0x00, 0x02, 0x80, 0x02, 0xe0, 0x02, 0xff, 0x02, 0x7f,
-    0x03, 0x00, 0x01, 0xff, 0x64, 0x00, 0x01, 0xff, 0x07, 0x00, 0x02, 0x80,
-    0x02, 0xe0, 0x02, 0xf8, 0x02, 0x7e, 0x02, 0x1f, 0x02, 0x07, 0x02, 0x01,
-    0x05, 0x00, 0x01, 0xff, 0x44, 0x00, 0x01, 0xf8, 0x1a, 0x08, 0x01, 0xf8,
-    0x04, 0x00, 0x01, 0xff, 0x03, 0x00, 0x02, 0x78, 0x02, 0x7e, 0x04, 0x7f,
-    0x02, 0x79, 0x0a, 0x78, 0x03, 0x00, 0x01, 0xff, 0x04, 0x00, 0x01, 0xf8,
-    0x1a, 0x08, 0x01, 0xf8, 0x04, 0x00, 0x01, 0xf8, 0x16, 0x08, 0x01, 0xf8,
-    0x08, 0x00, 0x01, 0x07, 0x1a, 0x04, 0x01, 0x07, 0x04, 0x00, 0x01, 0x07,
-    0x1a, 0x04, 0x01, 0x07, 0x04, 0x00, 0x01, 0x07, 0x1a, 0x04, 0x01, 0x07,
-    0x04, 0x00, 0x01, 0x07, 0x16, 0x04, 0x01, 0x07, 0x04, 0x00,
-};
-
-static const uint8_t nicepad_layer_3_rle[] = {
-    0x44, 0x00, 0x01, 0xe0, 0x1a, 0x20, 0x01, 0xe0, 0x64, 0x00, 0x01, 0xff,
-    0x03, 0x00, 0x02, 0xe0, 0x02, 0xf8, 0x02, 0x7e, 0x08, 0x1e, 0x02, 0x7e,
-    0x02, 0xf8, 0x02, 0xe0, 0x03, 0x00, 0x01, 0xff, 0x64, 0x00, 0x01, 0xff,
-    0x03, 0x00, 0x04, 0x01, 0x02, 0x00, 0x08, 0xe0, 0x02, 0xf8, 0x02, 0xff,
-    0x02, 0x1f, 0x03, 0x00, 0x01, 0xff, 0x64, 0x00, 0x01, 0xff, 0x03, 0x00,
-    0x04, 0x80, 0x02, 0x00, 0x08, 0x01, 0x02, 0x07, 0x02, 0xff, 0x02, 0xfe,
-    0x03, 0x00, 0x01, 0xff, 0x24, 0x00, 0x01, 0xf8, 0x1a, 0x08, 0x01, 0xf8,
-    0x04, 0x00, 0x01, 0xf8, 0x1a, 0x08, 0x01, 0xf8, 0x04, 0x00, 0x01, 0xff,
-    0x03, 0x00, 0x02, 0x07, 0x02, 0x1f, 0x02, 0x7e, 0x08, 0x78, 0x02, 0x7e,
-    0x02, 0x1f, 0x02, 0x07, 0x03, 0x00, 0x01, 0xff, 0x04, 0x00, 0x01, 0xf8,
-    0x16, 0x08, 0x01, 0xf8, 0x08, 0x00, 0x01, 0x07, 0x1a, 0x04, 0x01, 0x07,
-    0x04, 0x00, 0x01, 0x07, 0x1a, 0x04, 0x01, 0x07, 0x04, 0x00, 0x01, 0x07,
-    0x1a, 0x04, 0x01, 0x07, 0x04, 0x00, 0x01, 0x07, 0x16, 0x04, 0x01, 0x07,
-    0x04, 0x00,
-};
-
-static const uint8_t nicepad_layer_4_rle[] = {
-    0x64, 0x00, 0x01, 0xe0, 0x16, 0x20, 0x01, 0xe0, 0x68, 0x00, 0x01, 0xff,
-    0x01, 0x00, 0x04, 0xfe, 0x0c, 0x00, 0x04, 0xfe, 0x01, 0x00, 0x01, 0xff,
-    0x68, 0x00, 0x01, 0xff, 0x01, 0x00, 0x04, 0xff, 0x0c, 0x80, 0x04, 0xff,
-    0x01, 0x00, 0x01, 0xff, 0x68, 0x00, 0x01, 0xff, 0x01, 0x00, 0x10, 0x07,
-    0x04, 0xff, 0x01, 0x00, 0x01, 0xff, 0x08, 0x00, 0x01, 0xf8, 0x1a, 0x08,
-    0x01, 0xf8, 0x04, 0x00, 0x01, 0xf8, 0x1a, 0x08, 0x01, 0xf8, 0x04, 0x00,
-    0x01, 0xf8, 0x1a, 0x08, 0x01, 0xf8, 0x04, 0x00, 0x01, 0xff, 0x11, 0x00,
-    0x04, 0x7f, 0x01, 0x00, 0x01, 0xff, 0x08, 0x00, 0x01, 0x07, 0x1a, 0x04,
-    0x01, 0x07, 0x04, 0x00, 0x01, 0x07, 0x1a, 0x04, 0x01, 0x07, 0x04, 0x00,
-    0x01, 0x07, 0x1a, 0x04, 0x01, 0x07, 0x04, 0x00, 0x01, 0x07, 0x16, 0x04,
-    0x01, 0x07, 0x04, 0x00,
-};
-
-static uint8_t nicepad_layer_1_map[8 + 768];
-static uint8_t nicepad_layer_2_map[8 + 768];
-static uint8_t nicepad_layer_3_map[8 + 768];
-static uint8_t nicepad_layer_4_map[8 + 768];
-static uint8_t nicepad_layer_5_map[8 + 768];
-
-static const lv_img_dsc_t nicepad_layer_1 = {
-    .header.always_zero = 0,
-    .header.w = 128,
-    .header.h = 48,
-    .data_size = sizeof(nicepad_layer_1_map),
-    .header.cf = LV_IMG_CF_INDEXED_1BIT,
-    .data = nicepad_layer_1_map,
-};
-
-static const lv_img_dsc_t nicepad_layer_2 = {
-    .header.always_zero = 0,
-    .header.w = 128,
-    .header.h = 48,
-    .data_size = sizeof(nicepad_layer_2_map),
-    .header.cf = LV_IMG_CF_INDEXED_1BIT,
-    .data = nicepad_layer_2_map,
-};
-
-static const lv_img_dsc_t nicepad_layer_3 = {
-    .header.always_zero = 0,
-    .header.w = 128,
-    .header.h = 48,
-    .data_size = sizeof(nicepad_layer_3_map),
-    .header.cf = LV_IMG_CF_INDEXED_1BIT,
-    .data = nicepad_layer_3_map,
-};
-
-static const lv_img_dsc_t nicepad_layer_4 = {
-    .header.always_zero = 0,
-    .header.w = 128,
-    .header.h = 48,
-    .data_size = sizeof(nicepad_layer_4_map),
-    .header.cf = LV_IMG_CF_INDEXED_1BIT,
-    .data = nicepad_layer_4_map,
-};
-
-static const lv_img_dsc_t nicepad_layer_5 = {
-    .header.always_zero = 0,
-    .header.w = 128,
-    .header.h = 48,
-    .data_size = sizeof(nicepad_layer_5_map),
-    .header.cf = LV_IMG_CF_INDEXED_1BIT,
-    .data = nicepad_layer_5_map,
-};
+#define LAYER_NAME_REFRESH_INTERVAL_MS 500
 
 static void init_rect(lv_draw_rect_dsc_t *dsc, lv_color_t color) {
     lv_draw_rect_dsc_init(dsc);
@@ -230,124 +116,6 @@ static void init_label(lv_draw_label_dsc_t *dsc, lv_color_t color, const lv_font
     dsc->color = color;
     dsc->font = font;
     dsc->align = align;
-}
-
-static void init_layer_map(uint8_t *map) {
-    map[0] = 0xff;
-    map[1] = 0xff;
-    map[2] = 0xff;
-    map[3] = 0xff;
-    map[4] = 0x00;
-    map[5] = 0x00;
-    map[6] = 0x00;
-    map[7] = 0xff;
-    memset(map + 8, 0, 768);
-}
-
-static void set_layer_pixel(uint8_t *map, uint8_t x, uint8_t y) {
-    map[8 + (y * 16) + (x / 8)] |= BIT(7 - (x % 8));
-}
-
-static void clear_layer_row(uint8_t *map, uint8_t y) { memset(map + 8 + (y * 16), 0, 16); }
-
-static uint8_t layer_glyph_row(char c, uint8_t row) {
-    switch (c) {
-    case '3':
-        return (uint8_t[]){0x07, 0x01, 0x03, 0x01, 0x07}[row];
-    case 'B':
-        return (uint8_t[]){0x06, 0x05, 0x06, 0x05, 0x06}[row];
-    case 'E':
-        return (uint8_t[]){0x07, 0x04, 0x06, 0x04, 0x07}[row];
-    case 'G':
-        return (uint8_t[]){0x07, 0x04, 0x05, 0x05, 0x07}[row];
-    case 'H':
-        return (uint8_t[]){0x05, 0x05, 0x07, 0x05, 0x05}[row];
-    case 'I':
-        return (uint8_t[]){0x07, 0x02, 0x02, 0x02, 0x07}[row];
-    case 'L':
-        return (uint8_t[]){0x04, 0x04, 0x04, 0x04, 0x07}[row];
-    case 'N':
-        return (uint8_t[]){0x05, 0x07, 0x07, 0x07, 0x05}[row];
-    case 'O':
-        return (uint8_t[]){0x07, 0x05, 0x05, 0x05, 0x07}[row];
-    case 'R':
-        return (uint8_t[]){0x06, 0x05, 0x06, 0x05, 0x05}[row];
-    case 'S':
-        return (uint8_t[]){0x07, 0x04, 0x07, 0x01, 0x07}[row];
-    case 'T':
-        return (uint8_t[]){0x07, 0x02, 0x02, 0x02, 0x02}[row];
-    case 'U':
-        return (uint8_t[]){0x05, 0x05, 0x05, 0x05, 0x07}[row];
-    case 'Y':
-        return (uint8_t[]){0x05, 0x05, 0x02, 0x02, 0x02}[row];
-    default:
-        return 0x00;
-    }
-}
-
-static void draw_layer_char(uint8_t *map, char c, uint8_t x, uint8_t y) {
-    for (uint8_t row = 0; row < 5; row++) {
-        uint8_t bits = layer_glyph_row(c, row);
-        for (uint8_t col = 0; col < 3; col++) {
-            if ((bits & BIT(2 - col)) != 0) {
-                set_layer_pixel(map, x + col, y + row);
-            }
-        }
-    }
-}
-
-static void draw_layer_text(uint8_t *map, const char *text, uint8_t x, uint8_t y) {
-    for (; *text != '\0'; text++, x += 4) {
-        if (*text != ' ') {
-            draw_layer_char(map, *text, x, y);
-        }
-    }
-}
-
-static void draw_generated_bt_layer_map(uint8_t *map) {
-    init_layer_map(map);
-    draw_layer_text(map, "BLUETOOTH", 47, 17);
-    draw_layer_text(map, "SETTINGS", 49, 26);
-}
-
-static void unpack_layer_map(uint8_t *map, const uint8_t *rle, size_t rle_len) {
-    size_t page_byte = 0;
-
-    init_layer_map(map);
-
-    for (size_t i = 0; i + 1 < rle_len && page_byte < 768; i += 2) {
-        uint8_t count = rle[i];
-        uint8_t value = rle[i + 1];
-
-        for (uint8_t j = 0; j < count && page_byte < 768; j++, page_byte++) {
-            uint8_t x = page_byte % 128;
-            uint8_t page = page_byte / 128;
-
-            for (uint8_t bit = 0; bit < 8; bit++) {
-                if ((value & BIT(bit)) != 0) {
-                    set_layer_pixel(map, x, (page * 8) + bit);
-                }
-            }
-        }
-    }
-}
-
-static void init_layer_maps(void) {
-    static bool initialized;
-
-    if (initialized) {
-        return;
-    }
-
-    unpack_layer_map(nicepad_layer_1_map, nicepad_layer_1_rle, sizeof(nicepad_layer_1_rle));
-    clear_layer_row(nicepad_layer_1_map, 0);
-    clear_layer_row(nicepad_layer_1_map, 47);
-
-    unpack_layer_map(nicepad_layer_2_map, nicepad_layer_2_rle, sizeof(nicepad_layer_2_rle));
-    unpack_layer_map(nicepad_layer_3_map, nicepad_layer_3_rle, sizeof(nicepad_layer_3_rle));
-    unpack_layer_map(nicepad_layer_4_map, nicepad_layer_4_rle, sizeof(nicepad_layer_4_rle));
-    draw_generated_bt_layer_map(nicepad_layer_5_map);
-    initialized = true;
 }
 
 static lv_color_t icon_bg(void) { return lv_color_white(); }
@@ -487,51 +255,90 @@ ZMK_SUBSCRIPTION(nicepad_output_status, zmk_endpoint_changed);
 ZMK_SUBSCRIPTION(nicepad_output_status, zmk_ble_active_profile_changed);
 #endif
 
-static void set_layer_bitmap(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
-    switch (layer) {
-    case 0:
-        lv_img_set_src(obj, &nicepad_layer_1);
-        break;
-    case 1:
-        lv_img_set_src(obj, &nicepad_layer_2);
-        break;
-    case 2:
-        lv_img_set_src(obj, &nicepad_layer_3);
-        break;
-    case 3:
-        lv_img_set_src(obj, &nicepad_layer_4);
-        break;
-    default:
-        lv_img_set_src(obj, &nicepad_layer_5);
-        break;
-    }
-}
-
-static void set_layer_label(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
+static const char *layer_name_text(zmk_keymap_layer_index_t layer) {
     zmk_keymap_layer_id_t id = zmk_keymap_layer_index_to_id(layer);
     const char *name = (id == ZMK_KEYMAP_LAYER_ID_INVAL) ? NULL : zmk_keymap_layer_name(id);
 
-    lv_label_set_text(obj, (name != NULL && name[0] != '\0') ? name : "Layer");
+    return (name != NULL && name[0] != '\0') ? name : "Layer";
 }
+
+static void set_layer_label(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
+    lv_label_set_text(obj, layer_name_text(layer));
+}
+
+static void refresh_layer_label_if_changed(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
+    const char *name = layer_name_text(layer);
+    const char *current = lv_label_get_text(obj);
+
+    if (current == NULL || strcmp(current, name) != 0) {
+        lv_label_set_text(obj, name);
+    }
+}
+
+static void layer_name_refresh_manage(void);
 
 static void layer_update_cb(zmk_keymap_layer_index_t layer) {
     struct custom_layer_widget *widget;
     SYS_SLIST_FOR_EACH_CONTAINER(&layer_widgets, widget, node) {
-        set_layer_bitmap(widget->img, layer);
         set_layer_label(widget->label, layer);
     }
+
+    layer_name_refresh_manage();
 }
 
 static zmk_keymap_layer_index_t layer_get_state(const zmk_event_t *_eh) {
     return zmk_keymap_highest_layer_active();
 }
 
-ZMK_DISPLAY_WIDGET_LISTENER(nicepad_layer_bitmap, zmk_keymap_layer_index_t, layer_update_cb,
+ZMK_DISPLAY_WIDGET_LISTENER(nicepad_layer_name, zmk_keymap_layer_index_t, layer_update_cb,
                             layer_get_state)
-ZMK_SUBSCRIPTION(nicepad_layer_bitmap, zmk_layer_state_changed);
-#if IS_ENABLED(CONFIG_ZMK_STUDIO)
-ZMK_SUBSCRIPTION(nicepad_layer_bitmap, zmk_studio_rpc_notification);
+ZMK_SUBSCRIPTION(nicepad_layer_name, zmk_layer_state_changed);
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+ZMK_SUBSCRIPTION(nicepad_layer_name, zmk_usb_conn_state_changed);
 #endif
+
+static void layer_name_refresh_work_cb(struct k_work *work);
+static void layer_name_refresh_timer_cb(struct k_work *work);
+
+K_WORK_DEFINE(layer_name_refresh_work, layer_name_refresh_work_cb);
+K_WORK_DELAYABLE_DEFINE(layer_name_refresh_timer, layer_name_refresh_timer_cb);
+
+static bool layer_name_should_poll(void) {
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+    return zmk_usb_is_powered();
+#else
+    return false;
+#endif
+}
+
+static void layer_name_refresh_manage(void) {
+    if (layer_name_should_poll()) {
+        k_work_reschedule(&layer_name_refresh_timer, K_MSEC(LAYER_NAME_REFRESH_INTERVAL_MS));
+    } else {
+        k_work_cancel_delayable(&layer_name_refresh_timer);
+    }
+}
+
+static void layer_name_refresh_work_cb(struct k_work *work) {
+    zmk_keymap_layer_index_t layer = zmk_keymap_highest_layer_active();
+    struct custom_layer_widget *widget;
+
+    SYS_SLIST_FOR_EACH_CONTAINER(&layer_widgets, widget, node) {
+        refresh_layer_label_if_changed(widget->label, layer);
+    }
+}
+
+static void layer_name_refresh_timer_cb(struct k_work *work) {
+    if (!layer_name_should_poll()) {
+        return;
+    }
+
+    if (zmk_display_is_initialized()) {
+        k_work_submit_to_queue(zmk_display_work_q(), &layer_name_refresh_work);
+    }
+
+    k_work_reschedule(&layer_name_refresh_timer, K_MSEC(LAYER_NAME_REFRESH_INTERVAL_MS));
+}
 
 static void init_battery_widget(struct custom_battery_widget *widget, lv_obj_t *parent) {
     widget->obj = lv_canvas_create(parent);
@@ -548,8 +355,6 @@ static void init_output_widget(struct custom_output_widget *widget, lv_obj_t *pa
 }
 
 static void init_layer_widget(struct custom_layer_widget *widget, lv_obj_t *parent) {
-    init_layer_maps();
-
     widget->obj = lv_obj_create(parent);
     lv_obj_set_size(widget->obj, 128, 48);
     lv_obj_clear_flag(widget->obj, LV_OBJ_FLAG_SCROLLABLE);
@@ -557,21 +362,19 @@ static void init_layer_widget(struct custom_layer_widget *widget, lv_obj_t *pare
     lv_obj_set_style_border_width(widget->obj, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(widget->obj, 0, LV_PART_MAIN);
 
-    widget->img = lv_img_create(widget->obj);
-    lv_obj_align(widget->img, LV_ALIGN_TOP_LEFT, 0, 0);
-
     widget->label = lv_label_create(widget->obj);
     lv_obj_set_width(widget->label, 128);
     lv_label_set_long_mode(widget->label, LV_LABEL_LONG_CLIP);
     lv_obj_set_style_text_align(widget->label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_color(widget->label, lv_color_black(), LV_PART_MAIN);
-    lv_obj_align(widget->label, LV_ALIGN_TOP_MID, 0, 1);
+    lv_obj_set_style_text_font(widget->label, lv_theme_get_font_large(widget->label), LV_PART_MAIN);
+    lv_obj_align(widget->label, LV_ALIGN_CENTER, 0, 0);
 
     zmk_keymap_layer_index_t layer = zmk_keymap_highest_layer_active();
-    set_layer_bitmap(widget->img, layer);
     set_layer_label(widget->label, layer);
     sys_slist_append(&layer_widgets, &widget->node);
-    nicepad_layer_bitmap_init();
+    nicepad_layer_name_init();
+    layer_name_refresh_manage();
 }
 
 lv_obj_t *zmk_display_status_screen(void) {
