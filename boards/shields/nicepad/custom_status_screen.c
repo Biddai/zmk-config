@@ -20,6 +20,9 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/keymap.h>
+#if IS_ENABLED(CONFIG_ZMK_STUDIO)
+#include <zmk/studio/rpc.h>
+#endif
 #include <zmk/usb.h>
 
 #ifndef LV_ATTRIBUTE_IMG_NICEPAD_TOP_BANNER
@@ -79,6 +82,8 @@ struct custom_output_widget {
 struct custom_layer_widget {
     sys_snode_t node;
     lv_obj_t *obj;
+    lv_obj_t *img;
+    lv_obj_t *label;
 };
 
 struct custom_battery_state {
@@ -502,10 +507,18 @@ static void set_layer_bitmap(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
     }
 }
 
+static void set_layer_label(lv_obj_t *obj, zmk_keymap_layer_index_t layer) {
+    zmk_keymap_layer_id_t id = zmk_keymap_layer_index_to_id(layer);
+    const char *name = (id == ZMK_KEYMAP_LAYER_ID_INVAL) ? NULL : zmk_keymap_layer_name(id);
+
+    lv_label_set_text(obj, (name != NULL && name[0] != '\0') ? name : "Layer");
+}
+
 static void layer_update_cb(zmk_keymap_layer_index_t layer) {
     struct custom_layer_widget *widget;
     SYS_SLIST_FOR_EACH_CONTAINER(&layer_widgets, widget, node) {
-        set_layer_bitmap(widget->obj, layer);
+        set_layer_bitmap(widget->img, layer);
+        set_layer_label(widget->label, layer);
     }
 }
 
@@ -516,6 +529,9 @@ static zmk_keymap_layer_index_t layer_get_state(const zmk_event_t *_eh) {
 ZMK_DISPLAY_WIDGET_LISTENER(nicepad_layer_bitmap, zmk_keymap_layer_index_t, layer_update_cb,
                             layer_get_state)
 ZMK_SUBSCRIPTION(nicepad_layer_bitmap, zmk_layer_state_changed);
+#if IS_ENABLED(CONFIG_ZMK_STUDIO)
+ZMK_SUBSCRIPTION(nicepad_layer_bitmap, zmk_studio_rpc_notification);
+#endif
 
 static void init_battery_widget(struct custom_battery_widget *widget, lv_obj_t *parent) {
     widget->obj = lv_canvas_create(parent);
@@ -534,8 +550,26 @@ static void init_output_widget(struct custom_output_widget *widget, lv_obj_t *pa
 static void init_layer_widget(struct custom_layer_widget *widget, lv_obj_t *parent) {
     init_layer_maps();
 
-    widget->obj = lv_img_create(parent);
-    set_layer_bitmap(widget->obj, zmk_keymap_highest_layer_active());
+    widget->obj = lv_obj_create(parent);
+    lv_obj_set_size(widget->obj, 128, 48);
+    lv_obj_clear_flag(widget->obj, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_opa(widget->obj, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(widget->obj, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(widget->obj, 0, LV_PART_MAIN);
+
+    widget->img = lv_img_create(widget->obj);
+    lv_obj_align(widget->img, LV_ALIGN_TOP_LEFT, 0, 0);
+
+    widget->label = lv_label_create(widget->obj);
+    lv_obj_set_width(widget->label, 128);
+    lv_label_set_long_mode(widget->label, LV_LABEL_LONG_CLIP);
+    lv_obj_set_style_text_align(widget->label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_set_style_text_color(widget->label, lv_color_black(), LV_PART_MAIN);
+    lv_obj_align(widget->label, LV_ALIGN_TOP_MID, 0, 1);
+
+    zmk_keymap_layer_index_t layer = zmk_keymap_highest_layer_active();
+    set_layer_bitmap(widget->img, layer);
+    set_layer_label(widget->label, layer);
     sys_slist_append(&layer_widgets, &widget->node);
     nicepad_layer_bitmap_init();
 }
