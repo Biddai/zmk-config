@@ -290,11 +290,18 @@ static uint8_t nicepad_layer_char_width(char ch) {
     return (glyph != NULL) ? glyph->w : 0;
 }
 
-static int16_t nicepad_layer_text_width(const char *text, uint8_t spacing) {
+static int16_t nicepad_scaled_width(uint8_t width, uint8_t scale_div) {
+    return (width + scale_div - 1) / scale_div;
+}
+
+static int16_t nicepad_max_i16(int16_t a, int16_t b) { return (a > b) ? a : b; }
+
+static int16_t nicepad_layer_text_width(const char *text, size_t len, uint8_t spacing,
+                                        uint8_t scale_div) {
     int16_t width = 0;
     bool has_glyph = false;
 
-    for (size_t i = 0; text[i] != '\0'; i++) {
+    for (size_t i = 0; i < len && text[i] != '\0'; i++) {
         uint8_t char_width = nicepad_layer_char_width(text[i]);
 
         if (char_width == 0) {
@@ -305,7 +312,7 @@ static int16_t nicepad_layer_text_width(const char *text, uint8_t spacing) {
             width += spacing;
         }
 
-        width += char_width;
+        width += nicepad_scaled_width(char_width, scale_div);
         has_glyph = true;
     }
 
@@ -313,7 +320,7 @@ static int16_t nicepad_layer_text_width(const char *text, uint8_t spacing) {
 }
 
 static void nicepad_layer_draw_glyph(lv_obj_t *canvas, const struct nicepad_layer_font_glyph *glyph,
-                                     int16_t x, int16_t y) {
+                                     int16_t x, int16_t y, uint8_t scale_div) {
     lv_draw_rect_dsc_t fg;
     init_rect(&fg, lv_color_black());
 
@@ -326,8 +333,8 @@ static void nicepad_layer_draw_glyph(lv_obj_t *canvas, const struct nicepad_laye
                 continue;
             }
 
-            int16_t px = x + gx;
-            int16_t py = y + gy;
+            int16_t px = x + gx / scale_div;
+            int16_t py = y + gy / scale_div;
 
             if (px >= 0 && px < 128 && py >= 0 && py < 48) {
                 lv_canvas_draw_rect(canvas, px, py, 1, 1, &fg);
@@ -336,29 +343,20 @@ static void nicepad_layer_draw_glyph(lv_obj_t *canvas, const struct nicepad_laye
     }
 }
 
-static void set_layer_canvas(lv_obj_t *canvas, const char *text) {
-    uint8_t spacing = 2;
-    int16_t width = nicepad_layer_text_width(text, spacing);
-
-    if (width > 128) {
-        spacing = 1;
-        width = nicepad_layer_text_width(text, spacing);
-    }
-
+static void nicepad_layer_draw_line(lv_obj_t *canvas, const char *text, size_t len, int16_t y,
+                                    uint8_t spacing, uint8_t scale_div) {
+    int16_t width = nicepad_layer_text_width(text, len, spacing, scale_div);
     int16_t x = (128 - width) / 2;
-    int16_t y = (48 - NICEPAD_LAYER_FONT_HEIGHT) / 2;
     bool has_glyph = false;
 
-    lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
-
-    for (size_t i = 0; text[i] != '\0'; i++) {
+    for (size_t i = 0; i < len && text[i] != '\0'; i++) {
         char ch = nicepad_upper_char(text[i]);
 
         if (ch == ' ') {
             if (has_glyph) {
                 x += spacing;
             }
-            x += nicepad_layer_char_width(ch);
+            x += nicepad_scaled_width(nicepad_layer_char_width(ch), scale_div);
             has_glyph = true;
             continue;
         }
@@ -372,10 +370,75 @@ static void set_layer_canvas(lv_obj_t *canvas, const char *text) {
             x += spacing;
         }
 
-        nicepad_layer_draw_glyph(canvas, glyph, x, y);
-        x += glyph->w;
+        nicepad_layer_draw_glyph(canvas, glyph, x, y, scale_div);
+        x += nicepad_scaled_width(glyph->w, scale_div);
         has_glyph = true;
     }
+}
+
+static size_t nicepad_layer_best_split(const char *text, size_t len) {
+    size_t split = 0;
+    int16_t best_score = INT16_MAX;
+
+    for (size_t i = 1; i < len; i++) {
+        if (text[i] != ' ') {
+            continue;
+        }
+
+        int16_t left = nicepad_layer_text_width(text, i, 1, 2);
+        int16_t right = nicepad_layer_text_width(&text[i + 1], len - i - 1, 1, 2);
+        int16_t score = nicepad_max_i16(left, right);
+
+        if (score < best_score) {
+            split = i;
+            best_score = score;
+        }
+    }
+
+    if (split != 0) {
+        return split;
+    }
+
+    for (size_t i = 1; i < len; i++) {
+        int16_t left = nicepad_layer_text_width(text, i, 1, 2);
+        int16_t right = nicepad_layer_text_width(&text[i], len - i, 1, 2);
+        int16_t score = nicepad_max_i16(left, right);
+
+        if (score < best_score) {
+            split = i;
+            best_score = score;
+        }
+    }
+
+    return split;
+}
+
+static void set_layer_canvas(lv_obj_t *canvas, const char *text) {
+    size_t len = strlen(text);
+    uint8_t spacing = 2;
+
+    lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
+
+    if (nicepad_layer_text_width(text, len, spacing, 1) <= 128) {
+        int16_t y = (48 - NICEPAD_LAYER_FONT_HEIGHT) / 2;
+        nicepad_layer_draw_line(canvas, text, len, y, spacing, 1);
+        return;
+    }
+
+    size_t split = nicepad_layer_best_split(text, len);
+    uint8_t line_height = nicepad_scaled_width(NICEPAD_LAYER_FONT_HEIGHT, 2);
+    uint8_t line_gap = 4;
+    int16_t y = (48 - (line_height * 2 + line_gap)) / 2;
+
+    if (split == 0) {
+        nicepad_layer_draw_line(canvas, text, len, (48 - line_height) / 2, 1, 2);
+        return;
+    }
+
+    size_t second_start = (text[split] == ' ') ? split + 1 : split;
+    nicepad_layer_draw_line(canvas, text, split, y, 1, 2);
+    nicepad_layer_draw_line(canvas, &text[second_start], len - second_start,
+                            y + line_height + line_gap, 1, 2);
 }
 
 static void set_layer_widget_text(struct custom_layer_widget *widget, zmk_keymap_layer_index_t layer,
