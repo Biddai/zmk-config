@@ -208,7 +208,7 @@ static void set_output_canvas(lv_obj_t *canvas, struct custom_output_state state
         char text[5] = {};
         snprintf(text, sizeof(text), "%u%s", state.selected_endpoint.ble.profile_index + 1,
                  state.active_profile_bonded ? "" : "*");
-        lv_canvas_draw_text(canvas, 16, 3, 13, &label, text);
+        lv_canvas_draw_text(canvas, 13, 1, 13, &label, text);
         break;
     }
     }
