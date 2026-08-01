@@ -22,7 +22,7 @@
             , <&pro_micro 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)> /* [2,1] */
             , <&pro_micro 16 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)> /* [2,2] */
             , <&pro_micro 8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  /* [3,0] */
-            , <&pro_micro 18 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)> /* [3,1] */
+            , <&pro_micro 9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  /* [3,1] */
             , <&pro_micro 10 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)> /* [3,2] */
             ;
     };

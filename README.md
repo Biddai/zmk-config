@@ -44,7 +44,7 @@ Direct pin mapping:
 | `[2,1]` | `D14` |
 | `[2,2]` | `D16` |
 | `[3,0]` | `D8` |
-| `[3,1]` | `D18` |
+| `[3,1]` | `D9` |
 | `[3,2]` | `D10` |
 
 All keys use `GPIO_ACTIVE_LOW | GPIO_PULL_UP`.
